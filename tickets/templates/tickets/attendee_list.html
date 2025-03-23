@@ -1,0 +1,12 @@
+<h1>Attendee List</h1>
+<a href="{% url 'attendee_create' %}">Add New Attendee</a>
+<ul>
+  {% for attendee in attendees %}
+    <li>
+      {{ attendee.name }} ({{ attendee.email }})
+      [<a href="{% url 'attendee_update' attendee.id %}">Edit</a>]
+      [<a href="{% url 'attendee_delete' attendee.id %}">Delete</a>]
+    </li>
+  {% endfor %}
+</ul>
+<a href="{% url 'event_list' %}">Back to Events</a>

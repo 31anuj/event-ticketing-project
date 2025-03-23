@@ -1,0 +1,6 @@
+<h2>Are you sure you want to delete this ticket?</h2>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit">Yes, delete</button>
+</form>
+<a href="{% url 'ticket_list' %}">Cancel</a>

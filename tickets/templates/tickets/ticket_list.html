@@ -1,0 +1,11 @@
+<h1>Ticket List</h1>
+<a href="{% url 'ticket_create' %}">Create Ticket</a>
+<ul>
+  {% for ticket in tickets %}
+    <li>
+      {{ ticket.attendee.name }} - {{ ticket.event.name }} ({{ ticket.booking_date }})
+      [<a href="{% url 'ticket_delete' ticket.id %}">Delete</a>]
+    </li>
+  {% endfor %}
+</ul>
+<a href="{% url 'event_list' %}">Back to Events</a>
