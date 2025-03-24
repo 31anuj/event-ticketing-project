@@ -3,6 +3,7 @@ from .forms import EventForm, AttendeeForm, TicketForm
 from .models import Event, Attendee, Ticket
 from event_ticketing_lib.dynamodb_utils import save_ticket_to_dynamodb
 from event_ticketing_lib.s3_utils import upload_file_to_s3
+from event_ticketing_lib.sns_utils import publish_ticket_notification
 
 
 # List all events
@@ -89,19 +90,33 @@ def ticket_create(request):
     if request.method == 'POST':
         form = TicketForm(request.POST)
         if form.is_valid():
-            ticket = form.save()  # Save to Django DB
+            ticket = form.save()
+            
+            message = f"Ticket booked for event: {ticket.event.name}, by attendee: {ticket.attendee.name}"
+            publish_ticket_notification(message)
+            
+            
 
-            # Save to DynamoDB
+            '''# Save to DynamoDB
             save_ticket_to_dynamodb(
                 event_name=ticket.event.name,
                 attendee_name=ticket.attendee.name,
-                attendee_email=ticket.attendee.email,
+                attendee_email=ticket.attendee.email
             )
 
-            return redirect('ticket_list')
+            # Send SNS Notification
+            publish_ticket_notification(
+                event_name=str(ticket.event),
+                attendee_name=str(ticket.attendee),
+                attendee_email=ticket.attendee.email
+            )'''
+
+        return redirect('ticket_list')
     else:
         form = TicketForm()
+
     return render(request, 'tickets/ticket_form.html', {'form': form})
+
 
 def ticket_delete(request, pk):
     ticket = get_object_or_404(Ticket, pk=pk)
@@ -109,4 +124,10 @@ def ticket_delete(request, pk):
         ticket.delete()
         return redirect('ticket_list')
     return render(request, 'tickets/ticket_confirm_delete.html', {'ticket': ticket})
+
+'''
+# tickets/views.py
+
+message = f"Ticket booked for event: {ticket.event.name}, by attendee: {ticket.attendee.name}"
+publish_ticket_notification(message)'''
 
