@@ -4,6 +4,7 @@ from .models import Event, Attendee, Ticket
 from event_ticketing_lib.dynamodb_utils import save_ticket_to_dynamodb
 from event_ticketing_lib.s3_utils import upload_file_to_s3
 from event_ticketing_lib.sns_utils import publish_ticket_notification
+from event_ticketing_lib.sqs_utils import send_message_to_sqs
 
 
 # List all events
@@ -91,31 +92,40 @@ def ticket_create(request):
         form = TicketForm(request.POST)
         if form.is_valid():
             ticket = form.save()
-            
-            message = f"Ticket booked for event: {ticket.event.name}, by attendee: {ticket.attendee.name}"
-            publish_ticket_notification(message)
-            
-            
 
-            '''# Save to DynamoDB
-            save_ticket_to_dynamodb(
-                event_name=ticket.event.name,
-                attendee_name=ticket.attendee.name,
-                attendee_email=ticket.attendee.email
-            )
+            # Send message to SQS
+            try:
+                message = f"Ticket booked for event: {ticket.event.name}, by attendee: {ticket.attendee.name}"
+                send_message_to_sqs(message)
+                print("✅ SQS message sent")
+            except Exception as e:
+                print("❌ SQS Error:", str(e))
+
+            # Save to DynamoDB
+            try:
+                save_ticket_to_dynamodb(
+                    event_name=ticket.event.name,
+                    attendee_name=ticket.attendee.name,
+                    attendee_email=ticket.attendee.email
+                )
+                print("✅ Ticket saved to DynamoDB")
+            except Exception as e:
+                print("❌ DynamoDB Error:", str(e))
 
             # Send SNS Notification
-            publish_ticket_notification(
-                event_name=str(ticket.event),
-                attendee_name=str(ticket.attendee),
-                attendee_email=ticket.attendee.email
-            )'''
+            try:
+                sns_message = f"Ticket booked for event: {ticket.event.name}, by attendee: {ticket.attendee.name} ({ticket.attendee.email})"
+                publish_ticket_notification(sns_message)
+                print("✅ SNS notification sent")
+            except Exception as e:
+                print("❌ SNS Error:", str(e))
 
-        return redirect('ticket_list')
+            return redirect('ticket_list')
     else:
         form = TicketForm()
 
     return render(request, 'tickets/ticket_form.html', {'form': form})
+
 
 
 def ticket_delete(request, pk):
