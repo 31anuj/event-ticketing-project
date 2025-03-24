@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import EventForm, AttendeeForm, TicketForm
 from .models import Event, Attendee, Ticket
-
+from event_ticketing_lib.dynamodb_utils import save_ticket_to_dynamodb
 
 # List all events
 def event_list(request):
@@ -80,7 +80,15 @@ def ticket_create(request):
     if request.method == 'POST':
         form = TicketForm(request.POST)
         if form.is_valid():
-            form.save()
+            ticket = form.save()  # Save to Django DB
+
+            # Save to DynamoDB
+            save_ticket_to_dynamodb(
+                event_name=ticket.event.name,
+                attendee_name=ticket.attendee.name,
+                attendee_email=ticket.attendee.email,
+            )
+
             return redirect('ticket_list')
     else:
         form = TicketForm()
