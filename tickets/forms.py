@@ -2,9 +2,11 @@ from django import forms
 from .models import Event, Attendee, Ticket
 
 class EventForm(forms.ModelForm):
+    file = forms.FileField(required=False)
+    
     class Meta:
         model = Event
-        fields = ['name', 'location', 'date', 'description']
+        fields = ['name', 'location', 'date', 'description', 'file']
         
 class AttendeeForm(forms.ModelForm):
     class Meta:

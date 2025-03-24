@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .forms import EventForm, AttendeeForm, TicketForm
 from .models import Event, Attendee, Ticket
 from event_ticketing_lib.dynamodb_utils import save_ticket_to_dynamodb
+from event_ticketing_lib.s3_utils import upload_file_to_s3
+
 
 # List all events
 def event_list(request):
@@ -11,14 +13,21 @@ def event_list(request):
 # Create new event
 def event_create(request):
     if request.method == 'POST':
-        form = EventForm(request.POST)
+        form = EventForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            event = form.save(commit=False)
+
+            # Handle file upload to S3
+            uploaded_file = request.FILES.get('file')
+            if uploaded_file:
+                file_url = upload_file_to_s3(uploaded_file)
+                event.file_url = file_url
+
+            event.save()
             return redirect('event_list')
     else:
         form = EventForm()
     return render(request, 'tickets/event_form.html', {'form': form})
-
 # Update event
 def event_update(request, pk):
     event = get_object_or_404(Event, pk=pk)
