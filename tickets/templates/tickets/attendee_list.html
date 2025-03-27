@@ -1,12 +1,27 @@
-<h1>Attendee List</h1>
-<a href="{% url 'attendee_create' %}">Add New Attendee</a>
-<ul>
-  {% for attendee in attendees %}
-    <li>
-      {{ attendee.name }} ({{ attendee.email }})
-      [<a href="{% url 'attendee_update' attendee.id %}">Edit</a>]
-      [<a href="{% url 'attendee_delete' attendee.id %}">Delete</a>]
-    </li>
-  {% endfor %}
-</ul>
-<a href="{% url 'event_list' %}">Back to Events</a>
+{% extends 'tickets/base.html' %}
+{% load static %}
+
+{% block title %}Attendee List{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🎟️ Attendee List</h2>
+    <a class="btn" href="{% url 'attendee_create' %}">➕ Add New Attendee</a>
+
+    <ul class="record-list">
+        {% for attendee in attendees %}
+            <li>
+                <span><strong>{{ attendee.name }}</strong> ({{ attendee.email }})</span>
+                <div class="action-links">
+                    <a href="{% url 'attendee_update' attendee.id %}">✏️ Edit</a>
+                    <a href="{% url 'attendee_delete' attendee.id %}">🗑️ Delete</a>
+                </div>
+            </li>
+        {% empty %}
+            <li>No attendees found.</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{% url 'event_list' %}" class="back-link">🔙 Back to Events</a>
+</div>
+{% endblock %}

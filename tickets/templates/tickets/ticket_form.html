@@ -1,7 +1,19 @@
-<h2>Create Ticket</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Book</button>
-</form>
-<a href="{% url 'ticket_list' %}">Back to List</a>
+{% extends 'tickets/base.html' %}
+{% load static %}
+
+{% block title %}Create Ticket{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🎟️ Book a Ticket</h2>
+    <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            {{ form.as_p }}
+        </div>
+        <button type="submit" class="btn">Book</button>
+    </form>
+
+    <a href="{% url 'ticket_list' %}" class="back-link">🔙 Back to List</a>
+</div>
+{% endblock %}

@@ -1,11 +1,22 @@
-<h1>Event List</h1>
-<a href="{% url 'event_create' %}">Create New Event</a>
-<ul>
+{% extends 'tickets/base.html' %}
+
+{% block title %}Events | Event Ticketing{% endblock %}
+
+{% block content %}
+<h2>📅 Event List</h2>
+<a class="btn" href="{% url 'event_create' %}">+ Create New Event</a>
+
+<ul class="event-list">
   {% for event in events %}
     <li>
-      <strong>{{ event.name }}</strong> - {{ event.date }} at {{ event.location }}
-      [<a href="{% url 'event_update' event.id %}">Edit</a>]
-      [<a href="{% url 'event_delete' event.id %}">Delete</a>]
+      <strong>{{ event.name }}</strong> – {{ event.date }} at {{ event.location }}
+      <span class="actions">
+        <a href="{% url 'event_update' event.id %}">Edit</a> |
+        <a href="{% url 'event_delete' event.id %}">Delete</a>
+      </span>
     </li>
+  {% empty %}
+    <li>No events found.</li>
   {% endfor %}
 </ul>
+{% endblock %}

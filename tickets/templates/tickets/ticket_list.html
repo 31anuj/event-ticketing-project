@@ -1,11 +1,22 @@
-<h1>Ticket List</h1>
-<a href="{% url 'ticket_create' %}">Create Ticket</a>
-<ul>
-  {% for ticket in tickets %}
-    <li>
-      {{ ticket.attendee.name }} - {{ ticket.event.name }} ({{ ticket.booking_date }})
-      [<a href="{% url 'ticket_delete' ticket.id %}">Delete</a>]
-    </li>
-  {% endfor %}
-</ul>
-<a href="{% url 'event_list' %}">Back to Events</a>
+{% extends 'tickets/base.html' %}
+{% load static %}
+
+{% block title %}Ticket List{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🎟️ Ticket List</h2>
+    <a href="{% url 'ticket_create' %}" class="btn">➕ Create Ticket</a>
+    <ul>
+        {% for ticket in tickets %}
+        <li>
+            {{ ticket.attendee.name }} - {{ ticket.event.name }} ({{ ticket.event.date|date:"F d, Y, g:i a" }})
+            <a href="{% url 'ticket_delete' ticket.id %}" class="delete-link">🗑️ Delete</a>
+        </li>
+        {% empty %}
+        <li>No tickets have been booked yet.</li>
+        {% endfor %}
+    </ul>
+    <a href="{% url 'event_list' %}" class="back-link">🔙 Back to Events</a>
+</div>
+{% endblock %}

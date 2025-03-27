@@ -1,7 +1,19 @@
-<h2>{{ form.instance.pk|yesno:"Edit Attendee,Add Attendee" }}</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Save</button>
-</form>
-<a href="{% url 'attendee_list' %}">Back to List</a>
+{% extends 'tickets/base.html' %}
+{% load static %}
+
+{% block title %}Add Attendee{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🧑 Add Attendee</h2>
+    <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            {{ form.as_p }}
+        </div>
+        <button type="submit" class="btn">💾 Save</button>
+    </form>
+
+    <a href="{% url 'attendee_list' %}" class="back-link">🔙 Back to List</a>
+</div>
+{% endblock %}

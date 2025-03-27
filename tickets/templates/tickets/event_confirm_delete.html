@@ -1,6 +1,16 @@
-<h2>Are you sure you want to delete "{{ event.name }}"?</h2>
-<form method="post">
-  {% csrf_token %}
-  <button type="submit">Yes, delete</button>
-</form>
-<a href="{% url 'event_list' %}">Cancel</a>
+{% extends 'tickets/base.html' %}
+
+{% block title %}Delete Event{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="title"><span class="icon">⚠️</span> Confirm Deletion</h2>
+    <p>Are you sure you want to delete the event <strong>{{ event.name }}</strong>?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn delete">Yes, Delete</button>
+        <a href="{% url 'event_list' %}" class="btn cancel">Cancel</a>
+    </form>
+</div>
+{% endblock %}

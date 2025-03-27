@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}🎟️ Event Ticketing{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            🎟️ <span>Event Ticketing</span>
+        </div>
+        <nav>
+            <a href="{% url 'event_list' %}">Events</a>
+            <a href="{% url 'attendee_list' %}">Attendees</a>
+            <a href="{% url 'ticket_list' %}">Tickets</a>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>© 2025 Event Ticketing | Built on Django & AWS</p>
+    </footer>
+</body>
+</html>

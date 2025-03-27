@@ -1,9 +1,34 @@
-<h2>{{ form.instance.pk|yesno:"Edit Event,Create Event" }}</h2>
+{% extends 'tickets/base.html' %}
 
-<form method="post" enctype="multipart/form-data">  <!-- 👈 Important -->
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Save</button>
-</form>
+{% block content %}
+<div class="form-container">
+    <h2 class="form-title">🎫 Create / Edit Event</h2>
 
-<a href="{% url 'event_list' %}">Back to List</a>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            {{ form.name.label_tag }}<br>
+            {{ form.name }}
+        </div>
+        <div class="form-group">
+            {{ form.location.label_tag }}<br>
+            {{ form.location }}
+        </div>
+        <div class="form-group">
+            {{ form.date.label_tag }}<br>
+            {{ form.date }}
+        </div>
+        <div class="form-group">
+            {{ form.description.label_tag }}<br>
+            {{ form.description }}
+        </div>
+        <div class="form-group">
+            {{ form.file.label_tag }}<br>
+            {{ form.file }}
+        </div>
+        <button type="submit" class="btn-primary">💾 Save</button>
+    </form>
+
+    <a href="{% url 'event_list' %}" class="back-link">🔙 Back to Events</a>
+</div>
+{% endblock %}
