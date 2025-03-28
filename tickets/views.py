@@ -6,6 +6,9 @@ from event_ticketing_lib.s3_utils import upload_file_to_s3
 from event_ticketing_lib.sns_utils import publish_ticket_notification
 from event_ticketing_lib.sqs_utils import send_message_to_sqs
 from .dynamo_utils import delete_ticket_from_dynamodb
+from .dynamo_utils import get_event_by_id, update_event_in_dynamodb
+from django.http import HttpResponse
+from .dynamo_utils import save_event_to_dynamodb, get_all_events_from_dynamodb
 from tickets.dynamo_utils import (
     get_all_tickets_from_dynamodb,
     save_ticket_to_dynamodb,
@@ -18,38 +21,49 @@ from tickets.dynamo_utils import (
 )
 
 # ------------------ EVENT VIEWS ------------------
-
 def event_list(request):
-    events = Event.objects.all()
+    events = get_all_events_from_dynamodb()
     return render(request, 'tickets/event_list.html', {'events': events})
+
+
 
 
 def event_create(request):
     if request.method == 'POST':
-        form = EventForm(request.POST, request.FILES)
+        form = EventForm(request.POST)
         if form.is_valid():
-            event = form.save(commit=False)
-            uploaded_file = request.FILES.get('file')
-            if uploaded_file:
-                file_url = upload_file_to_s3(uploaded_file)
-                event.file_url = file_url
-            event.save()
+            event_data = form.cleaned_data
+            event_data['event_id'] = str(uuid.uuid4())
+            save_event_to_dynamodb(event_data)
             return redirect('event_list')
     else:
         form = EventForm()
     return render(request, 'tickets/event_form.html', {'form': form})
 
 
-def event_update(request, pk):
-    event = get_object_or_404(Event, pk=pk)
+def event_update(request, event_id):
+    event = get_event_by_id(event_id)
+    if not event:
+        return HttpResponse("❌ Event not found", status=404)
+
     if request.method == 'POST':
-        form = EventForm(request.POST, instance=event)
+        form = EventForm(request.POST)
         if form.is_valid():
-            form.save()
+            updated_data = {
+                'name': form.cleaned_data['name'],
+                'date': form.cleaned_data['date'].isoformat(),  # Convert to string
+                'location': form.cleaned_data['location'],
+                'description': form.cleaned_data['description'],
+            }
+            update_event_in_dynamodb(event_id, updated_data)
             return redirect('event_list')
     else:
-        form = EventForm(instance=event)
-    return render(request, 'tickets/event_form.html', {'form': form})
+        form = EventForm(initial=event)
+
+    return render(request, 'tickets/event_form.html', {
+        'form': form,
+        'event': event,
+    })
 
 
 def event_delete(request, pk):

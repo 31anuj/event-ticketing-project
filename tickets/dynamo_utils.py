@@ -135,3 +135,89 @@ def update_attendee_in_dynamodb(attendee_id, updated_data):
     except ClientError as e:
         print("❌ Error updating attendee:", e)
         return False
+
+# dynamo_utils.py
+
+# Event DynamoDB Table
+EVENTS_TABLE_NAME = "Events"
+events_table = dynamodb.Table(EVENTS_TABLE_NAME)
+
+def save_event_to_dynamodb(event_data):
+    # Convert datetime object to ISO string
+    event_data['date'] = event_data['date'].isoformat()
+
+    try:
+        events_table.put_item(Item=event_data)
+        print("✅ Event saved to DynamoDB.")
+    except ClientError as e:
+        print("❌ Error saving event to DynamoDB:", e)
+
+
+def get_all_events_from_dynamodb():
+    try:
+        response = events_table.scan()
+        items = response.get('Items', [])
+        events = []
+
+        for item in items:
+            events.append({
+                'event_id': item['event_id'],
+                'name': item['name'],
+                'description': item['description'],
+                'date': item['date'],  # already in ISO string format
+                'location': item['location'],
+            })
+
+        return events
+    except ClientError as e:
+        print("❌ Error fetching events:", e)
+        return []
+
+# dynamo_utils.py
+
+# ✅ Step 1: Get Event by ID
+def get_event_by_id(event_id):
+    try:
+        print("🟡 Scanning for event_id:", event_id)
+        response = events_table.get_item(Key={'event_id': event_id})
+        item = response.get('Item')
+        if item:
+            print("✅ Event found:", item)
+            return {
+                'event_id': item['event_id'],
+                'name': item['name'],
+                'date': item['date'],
+                'location': item['location'],
+                'description': item['description'],
+            }
+        print("❌ Event not found")
+        return None
+    except ClientError as e:
+        print("🚨 Error fetching event:", e)
+        return None
+
+# ✅ Step 2: Update Event in DynamoDB
+def update_event_in_dynamodb(event_id, data):
+    try:
+        response = events_table.update_item(
+            Key={'event_id': event_id},
+            UpdateExpression="SET #n = :name, #d = :date, #l = :location, #desc = :description",
+            ExpressionAttributeNames={
+                '#n': 'name',
+                '#d': 'date',
+                '#l': 'location',
+                '#desc': 'description'
+            },
+            ExpressionAttributeValues={
+                ':name': data['name'],
+                ':date': data['date'],
+                ':location': data['location'],
+                ':description': data['description'],
+            }
+        )
+        print("✅ Event updated:", event_id)
+        return True
+    except ClientError as e:
+        print("❌ Error updating event:", e)
+        return False
+
