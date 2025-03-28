@@ -221,3 +221,12 @@ def update_event_in_dynamodb(event_id, data):
         print("❌ Error updating event:", e)
         return False
 
+# ✅ Delete event from DynamoDB
+def delete_event_from_dynamodb(event_id):
+    try:
+        events_table.delete_item(Key={'event_id': event_id})
+        print("🗑️ Event deleted:", event_id)
+        return True
+    except ClientError as e:
+        print("❌ Error deleting event:", e)
+        return False

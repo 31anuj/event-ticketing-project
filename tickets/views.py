@@ -6,7 +6,7 @@ from event_ticketing_lib.s3_utils import upload_file_to_s3
 from event_ticketing_lib.sns_utils import publish_ticket_notification
 from event_ticketing_lib.sqs_utils import send_message_to_sqs
 from .dynamo_utils import delete_ticket_from_dynamodb
-from .dynamo_utils import get_event_by_id, update_event_in_dynamodb
+from .dynamo_utils import get_event_by_id, update_event_in_dynamodb, delete_event_from_dynamodb
 from django.http import HttpResponse
 from .dynamo_utils import save_event_to_dynamodb, get_all_events_from_dynamodb
 from tickets.dynamo_utils import (
@@ -66,12 +66,17 @@ def event_update(request, event_id):
     })
 
 
-def event_delete(request, pk):
-    event = get_object_or_404(Event, pk=pk)
+def event_delete(request, event_id):
+    event = get_event_by_id(event_id)
+    if not event:
+        return HttpResponse("❌ Event not found", status=404)
+
     if request.method == 'POST':
-        event.delete()
+        delete_event_from_dynamodb(event_id)
         return redirect('event_list')
+
     return render(request, 'tickets/event_confirm_delete.html', {'event': event})
+
 
 
 # ------------------ ATTENDEE VIEWS ------------------
