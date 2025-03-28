@@ -95,11 +95,14 @@ def attendee_update(request, attendee_id):
         form = AttendeeForm(request.POST)
         if form.is_valid():
             updated_data = form.cleaned_data
-            updated_data['attendee_id'] = attendee_id
-            update_attendee_in_dynamodb(updated_data)
+            updated_data['attendee_id'] = attendee_id  # Preserve the original ID
+            update_attendee_in_dynamodb(attendee_id, updated_data)
             return redirect('attendee_list')
     else:
-        form = AttendeeForm(initial=attendee)
+        form = AttendeeForm(initial={
+            'name': attendee['name'],
+            'email': attendee['email']
+        })
 
     return render(request, 'tickets/attendee_form.html', {'form': form})
 

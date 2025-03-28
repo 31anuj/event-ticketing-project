@@ -118,21 +118,20 @@ def get_attendee_by_id(attendee_id):
         return None
 
 # Update Attendee
-# Update an attendee
-def update_attendee_in_dynamodb(updated_data):
+# Update Attendee
+def update_attendee_in_dynamodb(attendee_id, updated_data):
     try:
-        attendee_id = updated_data["attendee_id"]
-        response = attendee_table.update_item(
-            Key={"attendee_id": attendee_id},
+        attendee_table.update_item(
+            Key={'attendee_id': attendee_id},
             UpdateExpression="SET #n = :name, email = :email",
-            ExpressionAttributeNames={"#n": "name"},
+            ExpressionAttributeNames={'#n': 'name'},
             ExpressionAttributeValues={
-                ":name": updated_data["name"],
-                ":email": updated_data["email"],
-            },
-            ReturnValues="UPDATED_NEW",
+                ':name': updated_data['name'],
+                ':email': updated_data['email'],
+            }
         )
-        return response
+        print("✅ Attendee updated successfully")
+        return True
     except ClientError as e:
         print("❌ Error updating attendee:", e)
-        return None
+        return False
