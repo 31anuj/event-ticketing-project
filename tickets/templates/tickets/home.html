@@ -1,0 +1,12 @@
+{% extends "tickets/base.html" %}
+{% block content %}
+<div class="home-container">
+    <h1>Welcome to EventSphere</h1>
+    <p>Your gateway to thrilling events and seamless ticket booking.</p>
+    <div class="home-buttons">
+        <a href="{% url 'login' %}" class="btn">Login</a>
+        <a href="{% url 'signup' %}" class="btn">Sign Up</a>
+    </div>
+    <img src="{% static 'images/home_poster.jpg' %}" alt="Events Poster" class="home-image">
+</div>
+{% endblock %}

@@ -13,8 +13,9 @@
             <li>
                 <span><strong>{{ attendee.name }}</strong> ({{ attendee.email }})</span>
                 <div class="action-links">
-                    <a href="{% url 'attendee_update' attendee.id %}">✏️ Edit</a>
-                    <a href="{% url 'attendee_delete' attendee.id %}">🗑️ Delete</a>
+                    <a href="{% url 'attendee_update' attendee.attendee_id %}">✏️Edit</a>
+                    <a href="{% url 'attendee_delete' attendee.attendee_id %}">🗑️ Delete</a>
+                    
                 </div>
             </li>
         {% empty %}

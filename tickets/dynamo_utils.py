@@ -11,25 +11,22 @@ ATTENDEE_TABLE_NAME = "Attendees"
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 attendee_table = dynamodb.Table('Attendees')
+tickets_table = dynamodb.Table('Tickets')  # if not already declared
 
-def save_ticket_to_dynamodb(event_name, attendee_name, attendee_email):
-    """
-    Save ticket information to DynamoDB
-    """
+
+def save_ticket_to_dynamodb(ticket_id, event_name, attendee_name, attendee_email):
     try:
-        ticket_id = str(uuid.uuid4())  # Unique ID if needed for future enhancements
-
-        table.put_item(
+        ticket_table.put_item(
             Item={
-                'attendee_name': attendee_name,
+                'ticket_id': str(ticket_id),
                 'event_name': event_name,
+                'attendee_name': attendee_name,
                 'attendee_email': attendee_email,
-                'ticket_id': ticket_id  # Optional: not used as key here
             }
         )
-        print("✅ Ticket saved to DynamoDB")
     except Exception as e:
-        print("❌ DynamoDB Error:", str(e))
+        print("❌ Error saving ticket to DynamoDB:", str(e))
+
 
 
 def get_all_tickets_from_dynamodb():
@@ -229,4 +226,14 @@ def delete_event_from_dynamodb(event_id):
         return True
     except ClientError as e:
         print("❌ Error deleting event:", e)
+        return False
+
+# ✅ Save a new ticket to DynamoDB
+def save_ticket_to_dynamodb(ticket_data):
+    try:
+        tickets_table.put_item(Item=ticket_data)
+        print("✅ Ticket saved to DynamoDB:", ticket_data)
+        return True
+    except ClientError as e:
+        print("❌ Error saving ticket:", e)
         return False

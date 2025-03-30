@@ -1,5 +1,8 @@
 from django import forms
 from .models import Event, Attendee, Ticket
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from .models import CustomUser
 
 class EventForm(forms.ModelForm):
     file = forms.FileField(required=False)
@@ -13,10 +16,11 @@ class AttendeeForm(forms.ModelForm):
         model = Attendee
         fields = ['name', 'email']
 
-class TicketForm(forms.ModelForm):
-    class Meta:
-        model = Ticket
-        fields = ['event', 'attendee']
+class TicketForm(forms.Form):
+    attendee_name = forms.CharField(max_length=100)
+    event_id = forms.CharField(max_length=100)
+    booking_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
+
         
 def attendee_list(request):
     attendees = Attendee.objects.all()
@@ -72,3 +76,8 @@ def ticket_delete(request, pk):
         ticket.delete()
         return redirect('ticket_list')
     return render(request, 'tickets/ticket_confirm_delete.html', {'ticket': ticket})
+    
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = CustomUser
+        fields = ['username', 'email', 'password1', 'password2', 'role']

@@ -1,16 +1,12 @@
 {% extends 'tickets/base.html' %}
-
-{% block title %}Delete Ticket{% endblock %}
-
 {% block content %}
-<div class="container">
-    <h2 class="title"><span class="icon">⚠️</span> Confirm Deletion</h2>
-    <p>Are you sure you want to delete the ticket for <strong>{{ ticket.attendee.name }}</strong> - <strong>{{ ticket.event.name }}</strong>?</p>
-
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn delete">Yes, Delete</button>
-        <a href="{% url 'ticket_list' %}" class="btn cancel">Cancel</a>
-    </form>
+<div class="card">
+  <h3>⚠️ Confirm Deletion</h3>
+  <p>Are you sure you want to delete the ticket for <strong>{{ attendee_name }}</strong> in event <strong>{{ event_name }}</strong>?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">🗑 Yes, Delete</button>
+    <a href="{% url 'ticket_list' %}">Cancel</a>
+  </form>
 </div>
 {% endblock %}

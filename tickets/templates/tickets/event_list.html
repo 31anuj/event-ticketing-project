@@ -9,14 +9,13 @@
 <ul class="event-list">
   {% for event in events %}
     <li>
-      <strong>{{ event.name }}</strong> – {{ event.date }} at {{ event.location }}
-      <span class="actions">
-        <a href="{% url 'event_update' event.id %}">Edit</a> |
-        <a href="{% url 'event_delete' event.id %}">Delete</a>
-      </span>
+      <strong>{{ event.name }}</strong> – {{ event.date }} at {{ event.location }}<br>
+      {% if event.file %}
+        <img src="{{ event.file.url }}" alt="Event Image" style="max-width: 200px; margin-top: 10px;"><br>
+      {% endif %}
+      <a href="{% url 'event_update' event.event_id %}">✏️ Edit</a> |
+      <a href="{% url 'event_delete' event.event_id %}">🗑️ Delete</a>
     </li>
-  {% empty %}
-    <li>No events found.</li>
   {% endfor %}
 </ul>
 {% endblock %}
