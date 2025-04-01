@@ -8,10 +8,16 @@
     <h2>🎟️ Book a Ticket</h2>
     <form method="POST">
         {% csrf_token %}
-        <div class="form-group">
-            {{ form.as_p }}
-        </div>
-        <button type="submit" class="btn">Book</button>
+        <label for="attendee_name">Attendee Name:</label>
+        {{ form.attendee_name }}
+        
+        <label for="event_id">Select Event:</label>
+        {{ form.event_id }}
+        
+        <label for="booking_date">Booking Date:</label>
+        {{ form.booking_date }}
+        
+        <button type="submit" class="btn">Book Ticket</button>
     </form>
 
     <a href="{% url 'ticket_list' %}" class="back-link">🔙 Back to List</a>

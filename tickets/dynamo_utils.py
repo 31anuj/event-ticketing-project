@@ -3,6 +3,8 @@ import uuid
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from .config import DYNAMODB_TABLE_NAME
+from .config import event_table
+
 
 # Attendees Table Name
 ATTENDEE_TABLE_NAME = "Attendees"
@@ -151,24 +153,23 @@ def save_event_to_dynamodb(event_data):
 
 
 def get_all_events_from_dynamodb():
-    try:
-        response = events_table.scan()
-        items = response.get('Items', [])
-        events = []
+    response = event_table.scan()
+    items = response.get('Items', [])
+    events = []
 
-        for item in items:
-            events.append({
-                'event_id': item['event_id'],
-                'name': item['name'],
-                'description': item['description'],
-                'date': item['date'],  # already in ISO string format
-                'location': item['location'],
-            })
+    for item in items:
+        # Safe fallback extraction
+        event = {
+    'event_id': item.get('event_id') or item.get('id'),
+    'name': item.get('name', '[No Name]'),
+    'description': item.get('description', ''),
+    'location': item.get('location', ''),
+    'date': item.get('date', ''),
+    'banner_url': item.get('banner_url', ''),
+}
+        events.append(event)
 
-        return events
-    except ClientError as e:
-        print("❌ Error fetching events:", e)
-        return []
+    return events
 
 # dynamo_utils.py
 

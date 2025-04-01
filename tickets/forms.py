@@ -3,23 +3,30 @@ from .models import Event, Attendee, Ticket
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import CustomUser
+from .dynamo_utils import get_all_events_from_dynamodb
 
-class EventForm(forms.ModelForm):
-    file = forms.FileField(required=False)
+class EventForm(forms.Form):
+    event_name = forms.CharField(label='Event Name')
+    description = forms.CharField(widget=forms.Textarea)
+    date = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}))
+    location = forms.CharField(max_length=255)
+    event_image_url = forms.URLField(required=False, label='Event Image (URL or upload)')
+    event_image_file = forms.FileField(required=False)
+    banner_url = forms.URLField(required=False)
     
     class Meta:
         model = Event
-        fields = ['name', 'location', 'date', 'description', 'file']
+        fields = ['event_name', 'description', 'location', 'date', 'banner_url']
         
 class AttendeeForm(forms.ModelForm):
     class Meta:
         model = Attendee
         fields = ['name', 'email']
 
-class TicketForm(forms.Form):
-    attendee_name = forms.CharField(max_length=100)
-    event_id = forms.CharField(max_length=100)
-    booking_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
+class TicketForm(forms.ModelForm):
+    class Meta:
+        model = Ticket
+        fields = ['attendee_name', 'event_id', 'booking_date']
 
         
 def attendee_list(request):
@@ -81,3 +88,14 @@ class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = CustomUser
         fields = ['username', 'email', 'password1', 'password2', 'role']
+        
+class TicketForm(forms.Form):
+    attendee_name = forms.CharField(max_length=100)
+    event_id = forms.ChoiceField(choices=[])  # Will fill dynamically
+    booking_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        events = get_all_events_from_dynamodb()
+        choices = [(event['event_id'], event.get('name', 'Unnamed')) for event in events]
+        self.fields['event_id'].choices = choices

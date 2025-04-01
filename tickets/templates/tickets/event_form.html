@@ -1,34 +1,46 @@
 {% extends 'tickets/base.html' %}
+{% load static %}
+
+{% block title %}Create Event{% endblock %}
 
 {% block content %}
 <div class="form-container">
-    <h2 class="form-title">🎫 Create / Edit Event</h2>
+  <h2>Create Event</h2>
 
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="form-group">
-            {{ form.name.label_tag }}<br>
-            {{ form.name }}
-        </div>
-        <div class="form-group">
-            {{ form.location.label_tag }}<br>
-            {{ form.location }}
-        </div>
-        <div class="form-group">
-            {{ form.date.label_tag }}<br>
-            {{ form.date }}
-        </div>
-        <div class="form-group">
-            {{ form.description.label_tag }}<br>
-            {{ form.description }}
-        </div>
-        <div class="form-group">
-            {{ form.file.label_tag }}<br>
-            {{ form.file }}
-        </div>
-        <button type="submit" class="btn-primary">💾 Save</button>
-    </form>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
 
-    <a href="{% url 'event_list' %}" class="back-link">🔙 Back to Events</a>
+    <div class="form-group">
+      <label for="id_name">Event Name:</label>
+      {{ form.event_name }}
+    </div>
+
+    <div class="form-group">
+      <label for="id_description">Description:</label>
+      {{ form.description }}
+    </div>
+
+    <div class="form-group">
+      <label for="id_location">Location:</label>
+      {{ form.location }}
+    </div>
+
+    <div class="form-group">
+      <label for="id_date">Date:</label>
+      {{ form.date }}
+    </div>
+
+    <div class="form-group">
+      <label for="id_banner_url">Event Image URL:</label>
+      {{ form.banner_url }}
+    </div>
+
+    <div class="form-group">
+      <label for="file">Upload Image:</label>
+      <input type="file" name="file" id="file">
+    </div>
+
+    <button type="submit" class="btn">💾 Save Event</button>
+  </form>
 </div>
 {% endblock %}

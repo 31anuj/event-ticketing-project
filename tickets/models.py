@@ -2,16 +2,16 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 # Create your models here.
+# tickets/models.py
+
 class Event(models.Model):
-    name = models.CharField(max_length=100)
-    location = models.CharField(max_length=255)
-    date = models.DateTimeField()
+    event_name = models.CharField(max_length=100)
     description = models.TextField()
-    
-    file_url = models.URLField(blank=True, null=True)
+    date = models.DateField()
+    banner = models.FileField(upload_to='event_banners/', blank=True, null=True)
 
     def __str__(self):
-        return self.name
+        return self.event_name
 
 
 class Attendee(models.Model):
@@ -24,9 +24,10 @@ class Attendee(models.Model):
 
 
 class Ticket(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    attendee = models.ForeignKey(Attendee, on_delete=models.CASCADE)
-    booking_date = models.DateTimeField(auto_now_add=True)
+    ticket_id = models.CharField(max_length=100, primary_key=True)
+    attendee_name = models.CharField(max_length=100)
+    event_id = models.CharField(max_length=100)
+    booking_date = models.DateField()
 
     def __str__(self):
         return f"Ticket for {self.attendee.name} to {self.event.name}"

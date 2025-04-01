@@ -1,7 +1,10 @@
 import uuid
-from .config import ticket_table, event_table
+import boto3
+from .config import sqs_queue_url
+from .config import ticket_table, event_table, sqs_queue_url, AWS_STORAGE_BUCKET_NAME
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import EventForm, AttendeeForm, TicketForm
+from .forms import TicketForm
 from .models import Event, Attendee, Ticket
 from event_ticketing_lib.s3_utils import upload_file_to_s3
 from event_ticketing_lib.sns_utils import publish_ticket_notification
@@ -30,26 +33,55 @@ from tickets.dynamo_utils import (
     get_attendee_by_id
 )
 
+import qrcode
+from io import BytesIO
+from django.core.files.base import ContentFile
+import base64
+import json
+from django.conf import settings
+from .config import s3_bucket_name
+from django.core.files.storage import default_storage
+sqs = boto3.client('sqs')
+
+
 # ------------------ EVENT VIEWS ------------------
 def event_list(request):
     events = get_all_events_from_dynamodb()
     return render(request, 'tickets/event_list.html', {'events': events})
 
 
+def upload_file_to_s3(file_obj, filename):
+    s3 = boto3.client('s3')
+    s3.upload_fileobj(file_obj, AWS_STORAGE_BUCKET_NAME, filename)
+    return f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{filename}"
 
 
 def event_create(request):
     if request.method == 'POST':
-        form = EventForm(request.POST)
+        form = EventForm(request.POST, request.FILES)
         if form.is_valid():
-            event_data = form.cleaned_data
-            event_data['event_id'] = str(uuid.uuid4())
-            save_event_to_dynamodb(event_data)
+            print(form.cleaned_data)
+            image_url = form.cleaned_data.get('banner_url', '')
+
+            uploaded_file = request.FILES.get('file')
+            if uploaded_file:
+                filename = f"event-banners/{uuid.uuid4()}.jpg"
+                image_url = upload_file_to_s3(uploaded_file, filename)
+
+            event_id = str(uuid.uuid4())
+            event_table.put_item(Item={
+                'event_id': event_id,
+                'name': form.cleaned_data['event_name'],
+                'description': form.cleaned_data['description'],
+                'location': form.cleaned_data['location'],
+                'date': form.cleaned_data['date'].isoformat(),
+                'banner_url': image_url,
+            })
             return redirect('event_list')
     else:
         form = EventForm()
-    return render(request, 'tickets/event_form.html', {'form': form})
 
+    return render(request, 'tickets/event_form.html', {'form': form})
 
 def event_update(request, event_id):
     event = get_event_by_id(event_id)
@@ -57,24 +89,50 @@ def event_update(request, event_id):
         return HttpResponse("❌ Event not found", status=404)
 
     if request.method == 'POST':
-        form = EventForm(request.POST)
+        form = EventForm(request.POST, request.FILES)  # ✅ Include request.FILES
         if form.is_valid():
+            print(form.cleaned_data)
             updated_data = {
-                'name': form.cleaned_data['name'],
-                'date': form.cleaned_data['date'].isoformat(),  # Convert to string
-                'location': form.cleaned_data['location'],
+                'event_id': event_id,
+                'name': form.cleaned_data.get('event_name', event.get('name')),
                 'description': form.cleaned_data['description'],
+                'date': form.cleaned_data['date'].isoformat(),
+                'location': form.cleaned_data['location'],
             }
-            update_event_in_dynamodb(event_id, updated_data)
+
+            # ✅ Handle file upload if user selected a new file
+            if request.FILES.get('event_image_file'):
+                file = request.FILES['event_image_file']
+                s3 = boto3.client('s3')
+                file_key = f"event-banners/{uuid.uuid4()}_{file.name}"
+                s3.upload_fileobj(file, AWS_STORAGE_BUCKET_NAME, file_key)
+                image_url = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{file_key}"
+                updated_data['banner_url'] = image_url
+
+            # ✅ If no new file uploaded, check if they provided an image URL
+            elif form.cleaned_data.get('event_image_url'):
+                updated_data['banner_url'] = form.cleaned_data['event_image_url']
+
+            # ✅ If neither file nor URL, fallback to existing image
+            else:
+                updated_data['banner_url'] = event.get('banner_url', '')
+
+            # Save to DynamoDB
+            event_table.put_item(Item=updated_data)
             return redirect('event_list')
     else:
-        form = EventForm(initial=event)
+        form = EventForm(initial={
+            'event_name': event.get('event_name'),
+            'description': event.get('description'),
+            'date': event.get('date'),
+            'location': event.get('location'),
+            'event_image_url': event.get('banner_url'),
+        })
 
     return render(request, 'tickets/event_form.html', {
         'form': form,
         'event': event,
     })
-
 
 def event_delete(request, event_id):
     event = get_event_by_id(event_id)
@@ -150,32 +208,24 @@ def attendee_delete(request, attendee_id):
 
 
 def ticket_list(request):
-    try:
-        response = ticket_table.scan()
-        tickets = response.get('Items', [])
-        
-        # Add event image URL to each ticket
-        for ticket in tickets:
-            try:
-                event_id = ticket.get('event_id')  # Safely get event_id
-                if not event_id:
-                    ticket['event_image_url'] = None
-                    continue
+    response = ticket_table.scan()
+    tickets = response['Items']
 
-                event_response = event_table.get_item(Key={'event_id': event_id})
-                event = event_response.get('Item')
-                ticket['event_image_url'] = event.get('file') if event else None
-            except Exception as e:
-                ticket['event_image_url'] = None
-    except Exception as e:
-        print("Error fetching tickets:", e)
-        tickets = []
+    # For each ticket, get the corresponding event image URL from the Events table
+    for ticket in tickets:
+        try:
+            event_id = ticket.get('event_id')
+            event_response = event_table.get_item(Key={'event_id': event_id})
+            event = event_response.get('Item')
+            ticket['event_image_url'] = event.get('file') if event else None
+        except KeyError:
+            ticket['event_image_url'] = None
 
     return render(request, 'tickets/ticket_list.html', {'tickets': tickets})
 
 
 
-def ticket_create(request):
+'''def ticket_create(request):
     if request.method == 'POST':
         form = TicketForm(request.POST)
         if form.is_valid():
@@ -214,17 +264,71 @@ def ticket_create(request):
     else:
         form = TicketForm()
 
+    return render(request, 'tickets/ticket_form.html', {'form': form})'''
+    
+def ticket_create(request):
+    if request.method == 'POST':
+        form = TicketForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            ticket_id = str(uuid.uuid4())
+
+            # ✅ Get event details using event_id
+            event = get_event_by_id(data['event_id'])
+
+            if not event:
+                return HttpResponse("❌ Invalid Event ID. Event not found.", status=400)
+
+            event_name = event.get('name', 'Unknown Event')
+
+            # ✅ Generate QR Code
+            qr_data = f"Ticket ID: {ticket_id}, Event: {event_name}, Attendee: {data['attendee_name']}"
+            qr_img = qrcode.make(qr_data)
+
+            buffer = BytesIO()
+            qr_img.save(buffer, format='PNG')
+            qr_bytes = buffer.getvalue()
+
+            # ✅ Upload QR Code to S3
+            qr_key = f"tickets/qrcodes/{ticket_id}.png"
+            s3= boto3.client('s3')
+            s3.put_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=qr_key, Body=qr_bytes, ContentType='image/png')
+            qr_url = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{qr_key}"
+
+            # ✅ Save ticket to DynamoDB
+            ticket_table.put_item(Item={
+                'ticket_id': ticket_id,
+                'attendee_name': data['attendee_name'],
+                'event_id': data['event_id'],
+                'booking_date': data['booking_date'].isoformat(),
+                'qr_code_url': qr_url
+            })
+
+            # ✅ Send SQS message
+            message_body = f"Ticket booked for event: {event_name}, by attendee: {data['attendee_name']}"
+            sqs.send_message(QueueUrl=sqs_queue_url, MessageBody=message_body)
+
+            return redirect('ticket_list')
+    else:
+        form = TicketForm()
+
     return render(request, 'tickets/ticket_form.html', {'form': form})
 
 
 
 
+
+
+# Ticket Delete View
 def ticket_delete(request, ticket_id):
     try:
+        # Delete the ticket from DynamoDB
         ticket_table.delete_item(Key={'ticket_id': ticket_id})
     except Exception as e:
-        print(f"Error deleting ticket {ticket_id}: {e}")
+        print(f"Error deleting ticket: {e}")
+
     return redirect('ticket_list')
+
     
 def ticket_update(request, ticket_id):
     # Get existing ticket from DynamoDB
@@ -334,3 +438,28 @@ def dashboard_view(request):
         return redirect('attendee_dashboard')
     else:
         return HttpResponse("❌ Role not recognized", status=403)
+        
+
+def update_event_in_dynamodb(event_id, updated_data):
+    event_table.update_item(
+        Key={'event_id': event_id},
+        UpdateExpression="SET #n = :name, #d = :date, #l = :location, #desc = :desc, #b = :banner",
+        ExpressionAttributeNames={
+            '#n': 'name',
+            '#d': 'date',
+            '#l': 'location',
+            '#desc': 'description',
+            '#b': 'banner_url',
+        },
+        ExpressionAttributeValues={
+            ':name': updated_data['name'],
+            ':date': updated_data['date'],
+            ':location': updated_data['location'],
+            ':desc': updated_data['description'],
+            ':banner': updated_data['banner_url'],
+        }
+    )
+
+def get_event_by_id(event_id):
+    response = event_table.get_item(Key={'event_id': event_id})
+    return response.get('Item')

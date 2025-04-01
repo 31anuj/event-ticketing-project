@@ -8,14 +8,23 @@
 
 <ul class="event-list">
   {% for event in events %}
-    <li>
-      <strong>{{ event.name }}</strong> – {{ event.date }} at {{ event.location }}<br>
-      {% if event.file %}
-        <img src="{{ event.file.url }}" alt="Event Image" style="max-width: 200px; margin-top: 10px;"><br>
-      {% endif %}
-      <a href="{% url 'event_update' event.event_id %}">✏️ Edit</a> |
-      <a href="{% url 'event_delete' event.event_id %}">🗑️ Delete</a>
-    </li>
-  {% endfor %}
+  <div class="event-card">
+    {% if event.banner_url %}
+      <img src="{{ event.banner_url }}" alt="Banner" class="banner-image">
+    {% endif %}
+    <h3 style="color: orange;">{{ event.name }}</h3>
+    <p>{{ event.description }}</p>
+    <p><strong>Location:</strong> {{ event.location }}</p>
+    <p><strong>Date:</strong> {{ event.date }}</p>
+
+    {% if event.event_id %}
+      <p>
+        <a href="{% url 'event_update' event.event_id %}">✏️ Edit</a> |
+        <a href="{% url 'event_delete' event.event_id %}">🗑️ Delete</a>
+      </p>
+    {% endif %}
+  </div>
+{% endfor %}
+
 </ul>
 {% endblock %}

@@ -110,3 +110,65 @@ select {
     font-size: 0.85rem;
     border-top: 2px solid red;
 }
+
+/* static/css/styles.css */
+
+.banner-image {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+
+
+.event-form label {
+  color: orange;
+  font-weight: bold;
+  display: block;
+  margin-top: 10px;
+}
+
+.event-form input,
+.event-form select,
+.event-form textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 2px solid orange;
+  background-color: #0000ff;
+  color: white;
+  font-family: inherit;
+}
+
+.btn-save {
+  background-color: orange;
+  border: none;
+  padding: 10px 20px;
+  font-weight: bold;
+  color: #000;
+  cursor: pointer;
+}
+
+.form-container {
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}

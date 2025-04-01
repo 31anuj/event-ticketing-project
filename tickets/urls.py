@@ -30,7 +30,10 @@ urlpatterns = [
     path('tickets/delete/<str:ticket_id>/', views.ticket_delete, name='ticket_delete'),
     path('tickets/update/<str:ticket_id>/', views.ticket_update, name='ticket_update'),
 
-    
+    path('events/edit/<str:event_id>/', views.event_update, name='event_update'),
+    path('events/update/<str:event_id>/', views.event_update, name='event_update'),
+    path('events/delete/<str:event_id>/', views.event_delete, name='event_delete'),
+
     
     path('', TemplateView.as_view(template_name='tickets/home.html'), name='home'),
      # Auth
