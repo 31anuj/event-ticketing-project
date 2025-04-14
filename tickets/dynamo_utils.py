@@ -21,7 +21,7 @@ dynamodb_client = boto3.resource('dynamodb')
 
 class DynamoDBManager:
     def __init__(self):
-        self.dynamodb = boto3.resource('dynamodb')
+        self.dynamodb = boto3.resource('dynamodb' , region_name= 'us-east-1')
         self.tables = {
             'Events': None,
             'Attendees': None,
