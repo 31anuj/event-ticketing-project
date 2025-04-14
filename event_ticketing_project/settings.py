@@ -134,11 +134,12 @@ CSRF_TRUSTED_ORIGINS = ["https://60e28771264d4afaaadb8676e9ad6890.vfs.cloud9.us-
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 
-STATIC_URL = 'static/'
+
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'tickets/static'),
 ]
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = 'static/'
 
