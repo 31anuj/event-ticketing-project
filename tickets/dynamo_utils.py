@@ -4,6 +4,14 @@ from botocore.exceptions import ClientError
 import logging
 from datetime import datetime
 
+AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
+
+dynamodb = boto3.resource(
+    'dynamodb',
+    region_name=AWS_REGION
+)
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
