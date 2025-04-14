@@ -3,8 +3,9 @@ from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 import logging
 from datetime import datetime
+import os
 
-#AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
+AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 
