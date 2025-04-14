@@ -6,10 +6,7 @@ from datetime import datetime
 
 #AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
 
-dynamodb = boto3.resource(
-    'dynamodb',
-    region_name=AWS_REGION
-)
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 
 
 # Configure logging
