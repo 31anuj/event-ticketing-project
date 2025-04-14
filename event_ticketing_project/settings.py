@@ -137,7 +137,7 @@ CSRF_TRUSTED_ORIGINS = ["https://60e28771264d4afaaadb8676e9ad6890.vfs.cloud9.us-
 
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'tickets/static'),
+    os.path.join(BASE_DIR, '/static'),
 ]
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
