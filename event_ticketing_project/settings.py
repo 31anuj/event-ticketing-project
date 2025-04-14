@@ -80,6 +80,7 @@ WSGI_APPLICATION = 'event_ticketing_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+DYNAMODB_TABLE_NAME = 'Attendees', 'Events' , 'Tickets'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -126,10 +127,9 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Add your actual Cloud9 URL here
-CSRF_TRUSTED_ORIGINS = [
-    'https://6b75947a2712435aaabbc29bf0c1194b.vfs.cloud9.eu-west-1.amazonaws.com'
-]
-
+CSRF_TRUSTED_ORIGINS = ["https://60e28771264d4afaaadb8676e9ad6890.vfs.cloud9.us-east-1.amazonaws.com/"
+                        'https://*.vfs.cloud9.us-east-1.amazonaws.com'
+                        ]
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 

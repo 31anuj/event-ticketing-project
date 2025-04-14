@@ -7,33 +7,35 @@ from .forms import EventForm, AttendeeForm, TicketForm
 from .forms import TicketForm
 from .models import Event, Attendee, Ticket
 from event_ticketing_lib.s3_utils import upload_file_to_s3
-from event_ticketing_lib.sns_utils import publish_ticket_notification
+#from event_ticketing_lib.sns_utils import publish_ticket_notification
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from event_ticketing_lib.sqs_utils import send_message_to_sqs
+#from event_ticketing_lib.sqs_utils import send_message_to_sqs
 from tickets.forms import CustomUserCreationForm
 from .models import CustomUser
+from .dynamo_utils import DynamoDBManager
 from .dynamo_utils import delete_ticket_from_dynamodb
-from .dynamo_utils import get_event_by_id, update_event_in_dynamodb, delete_event_from_dynamodb
+from .dynamo_utils import get_event_by_id_from_dynamodb
 from .config import ticket_table, event_table
 from django.http import HttpResponse
 from boto3.dynamodb.conditions import Key
-from .dynamo_utils import save_event_to_dynamodb, get_all_events_from_dynamodb
+from .dynamo_utils import get_all_events_from_dynamodb
 from tickets.dynamo_utils import (
     get_all_tickets_from_dynamodb,
     save_ticket_to_dynamodb,
     delete_ticket_from_dynamodb,
-    get_all_attendees_from_dynamodb,
+    # get_all_attendees_from_dynamodb,
     save_attendee_to_dynamodb,
-    delete_attendee_from_dynamodb,
+    # delete_attendee_from_dynamodb,
     update_attendee_in_dynamodb,
-    get_attendee_by_id
+    get_attendee_id_from_dynamodb
 )
+from .dynamo_utils import get_all_attendees_from_dynamodb
 
-import qrcode
+#import qrcode
 from io import BytesIO
 from django.core.files.base import ContentFile
 import base64
@@ -84,7 +86,7 @@ def event_create(request):
     return render(request, 'tickets/event_form.html', {'form': form})
 
 def event_update(request, event_id):
-    event = get_event_by_id(event_id)
+    event = get_event_by_id_from_dynamodb(event_id)
     if not event:
         return HttpResponse("❌ Event not found", status=404)
 
@@ -146,12 +148,24 @@ def event_delete(request, event_id):
     return render(request, 'tickets/event_confirm_delete.html', {'event': event})
 
 
-
 # ------------------ ATTENDEE VIEWS ------------------
 
 # List Attendees
-def attendee_list(request):
+'''def attendee_list(request):
     attendees = get_all_attendees_from_dynamodb()
+    return render(request, 'tickets/attendee_list.html', {'attendees': attendees})'''
+
+def attendee_list(request):
+    try:
+        attendees = get_all_attendees_from_dynamodb()
+        return render(request, 'tickets/attendee_list.html', {'attendees': attendees})
+    except Exception as e:
+        print(f"Error in attendee_list view: {e}")
+        return render(request, 'error.html', {'message': 'Could not load attendees'})
+
+def attendee_list(request):
+    db_manager = DynamoDBManager()  # Initialize the manager
+    attendees = db_manager.get_all_attendees()  # Use the manager method
     return render(request, 'tickets/attendee_list.html', {'attendees': attendees})
 
 
@@ -163,9 +177,11 @@ def attendee_create(request):
             attendee_id = str(uuid.uuid4())
             name = form.cleaned_data['name']
             email = form.cleaned_data['email']
-
+            attendee_details = {'attendee_id': attendee_id, 
+            'name' : name,
+            'email' : email}
             # Pass individual values instead of a dict
-            save_attendee_to_dynamodb(attendee_id, name, email)
+            save_attendee_to_dynamodb(attendee_details)
 
             return redirect('attendee_list')
     else:
@@ -176,19 +192,20 @@ def attendee_create(request):
 # Update Attendee
 # Update Attendee
 def attendee_update(request, attendee_id):
-    attendee = get_attendee_by_id(attendee_id)
-
+    attendee = get_attendee_id_from_dynamodb(attendee_id)
+    print(attendee[0])
+    # attendee = json.loads(attendee)
     if request.method == 'POST':
         form = AttendeeForm(request.POST)
         if form.is_valid():
             updated_data = form.cleaned_data
             updated_data['attendee_id'] = attendee_id  # Preserve the original ID
-            update_attendee_in_dynamodb(attendee_id, updated_data)
+            update_attendee_in_dynamodb(updated_data)
             return redirect('attendee_list')
     else:
         form = AttendeeForm(initial={
-            'name': attendee['name'],
-            'email': attendee['email']
+            'name': attendee[0]['name'],
+            'email': attendee[0]['email']
         })
 
     return render(request, 'tickets/attendee_form.html', {'form': form})
@@ -282,12 +299,12 @@ def ticket_create(request):
             event_name = event.get('name', 'Unknown Event')
 
             # ✅ Generate QR Code
-            qr_data = f"Ticket ID: {ticket_id}, Event: {event_name}, Attendee: {data['attendee_name']}"
-            qr_img = qrcode.make(qr_data)
+            #qr_data = f"Ticket ID: {ticket_id}, Event: {event_name}, Attendee: {data['attendee_name']}"
+            #qr_img = qrcode.make(qr_data)
 
-            buffer = BytesIO()
-            qr_img.save(buffer, format='PNG')
-            qr_bytes = buffer.getvalue()
+            # buffer = BytesIO()
+            # qr_img.save(buffer, format='PNG')
+            # qr_bytes = buffer.getvalue()
 
             # ✅ Upload QR Code to S3
             qr_key = f"tickets/qrcodes/{ticket_id}.png"
@@ -460,6 +477,6 @@ def update_event_in_dynamodb(event_id, updated_data):
         }
     )
 
-def get_event_by_id(event_id):
-    response = event_table.get_item(Key={'event_id': event_id})
-    return response.get('Item')
+# def get_event_by_id(event_id):
+#     response = event_table.get_item(Key={'event_id': event_id})
+#     return response.get('Item')

@@ -1,240 +1,221 @@
 import boto3
-import uuid
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
-from .config import DYNAMODB_TABLE_NAME
-from .config import event_table
+import logging
+from datetime import datetime
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Attendees Table Name
-ATTENDEE_TABLE_NAME = "Attendees"
+# Initialize DynamoDB resource
+dynamodb_client = boto3.resource('dynamodb')
 
-# Initialize DynamoDB resource and table
-dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(DYNAMODB_TABLE_NAME)
-attendee_table = dynamodb.Table('Attendees')
-tickets_table = dynamodb.Table('Tickets')  # if not already declared
+class DynamoDBManager:
+    def __init__(self):
+        self.dynamodb = boto3.resource('dynamodb')
+        self.tables = {
+            'Events': None,
+            'Attendees': None,
+            'Tickets': None
+        }
+        self._initialize_tables()
+    
+    def _initialize_tables(self):
+        """Initialize tables with fallback behavior"""
+        for table_name in self.tables.keys():
+            try:
+                self.tables[table_name] = self.dynamodb.Table(table_name)
+                # Test connection with a simple operation
+                self.tables[table_name].table_status
+                logger.info(f"Successfully connected to {table_name} table")
+            except ClientError as e:
+                logger.warning(f"Could not access {table_name} table: {str(e)}")
+                self.tables[table_name] = None
 
-
-def save_ticket_to_dynamodb(ticket_id, event_name, attendee_name, attendee_email):
-    try:
-        ticket_table.put_item(
-            Item={
-                'ticket_id': str(ticket_id),
-                'event_name': event_name,
-                'attendee_name': attendee_name,
-                'attendee_email': attendee_email,
-            }
-        )
-    except Exception as e:
-        print("❌ Error saving ticket to DynamoDB:", str(e))
-
-
-
-def get_all_tickets_from_dynamodb():
-    """
-    Retrieve all tickets from DynamoDB
-    """
-    try:
-        response = table.scan()
-        return response.get("Items", [])
-    except Exception as e:
-        print("❌ DynamoDB Scan Error:", str(e))
-        return []
-
-
-def delete_ticket_from_dynamodb(attendee_name, event_name):
-    """
-    Delete a specific ticket from DynamoDB using composite key
-    """
-    try:
-        table.delete_item(
-            Key={
-                'attendee_name': attendee_name,
-                'event_name': event_name
-            }
-        )
-        print("🗑️ Ticket deleted from DynamoDB")
-    except Exception as e:
-        print("❌ DynamoDB Delete Error:", str(e))
-
-# Save a new attendee
-def save_attendee_to_dynamodb(attendee_id, name, email):
-    table = dynamodb.Table('Attendees')
-    try:
-        table.put_item(
-            Item={
-                'attendee_id': attendee_id,
-                'name': name,
-                'email': email
-            }
-        )
-        return attendee_id
-    except ClientError as e:
-        print("Error saving attendee to DynamoDB:", e)
-        return None
-
-# Get all attendees
-def get_all_attendees_from_dynamodb():
-    try:
-        response = attendee_table.scan()
-        items = response.get("Items", [])
-        attendees = []
-
-        for item in items:
-            attendees.append({
-                'attendee_id': item['attendee_id'],  # removed ['S']
-                'name': item['name'],
-                'email': item['email'],
-            })
-
-        return attendees
-    except ClientError as e:
-        print("❌ Error fetching attendees:", e)
-        return []
-
-
-# Delete an attendee
-def delete_attendee_from_dynamodb(attendee_id):
-    try:
-        attendee_table.delete_item(
-            Key={'attendee_id': attendee_id}  # Make sure the key name matches your table's partition key
-        )
-        return True
-    except ClientError as e:
-        print("❌ Error deleting attendee:", e)
-        return False
+    # ========== EVENT OPERATIONS ==========
+    def get_all_events(self):
+        """Get all events with fallback to sample data"""
+        fallback_events = [{
+            'event_id': 'sample1',
+            'name': 'Sample Event',
+            'date': datetime.now().isoformat(),
+            'location': 'Virtual',
+            'description': 'Fallback event data'
+        }]
         
-# Get a single attendee by ID
-def get_attendee_by_id(attendee_id):
-    try:
-        response = attendee_table.get_item(
-            Key={'attendee_id': attendee_id}
-        )
-        return response.get('Item')
-    except ClientError as e:
-        print("❌ Error fetching attendee:", e)
-        return None
+        if not self.tables['Events']:
+            logger.warning("No access to Events table - returning sample data")
+            return fallback_events
+            
+        try:
+            response = self.tables['Events'].scan(
+                Select='SPECIFIC_ATTRIBUTES',
+                ProjectionExpression='event_id, #n, #d, location, description',
+                ExpressionAttributeNames={'#n': 'name', '#d': 'date'}
+            )
+            return response.get('Items', fallback_events)
+        except ClientError as e:
+            logger.error(f"Error fetching events: {str(e)}")
+            return fallback_events
 
-# Update Attendee
-# Update Attendee
-def update_attendee_in_dynamodb(attendee_id, updated_data):
-    try:
-        attendee_table.update_item(
-            Key={'attendee_id': attendee_id},
-            UpdateExpression="SET #n = :name, email = :email",
-            ExpressionAttributeNames={'#n': 'name'},
-            ExpressionAttributeValues={
-                ':name': updated_data['name'],
-                ':email': updated_data['email'],
-            }
-        )
-        print("✅ Attendee updated successfully")
-        return True
-    except ClientError as e:
-        print("❌ Error updating attendee:", e)
-        return False
+    def get_event_by_id(self, event_id):
+        try:
+            table = dynamodb_client.Table('Events')
+            response = table.scan(
+                    Limit=100
+                )
+            
+            # response = dynamodb_client.get_item(
+            #     TableName='Events',
+            #     Key={
+            #         'event_id': {'S': event_id}
+            #     }
+            # )
+            return response.get('Item')
+        except ClientError as e:
+            print(f"Error fetching event with ID {event_id}: {e}")
+            return None
 
-# dynamo_utils.py
+    # ========== TICKET OPERATIONS ==========
+    def get_all_tickets(self):
+        """Get all tickets with fallback to empty list"""
+        if not self.tables['Tickets']:
+            logger.warning("No access to Tickets table - returning empty list")
+            return []
+            
+        try:
+            response = self.tables['Tickets'].scan(
+                Limit=10,  # Reduce request size
+                Select='SPECIFIC_ATTRIBUTES',
+                ProjectionExpression='ticket_id,event_id,attendee_id'
+            )
+            return response.get('Items', [])
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'AccessDeniedException':
+                logger.warning("Permission denied for scan operation - returning empty list")
+                return []
+            logger.error(f"Error fetching tickets: {str(e)}")
+            return []
 
-# Event DynamoDB Table
-EVENTS_TABLE_NAME = "Events"
-events_table = dynamodb.Table(EVENTS_TABLE_NAME)
+    def create_ticket(self, ticket_data):
+        """Create ticket with fallback"""
+        if not self.tables['Tickets']:
+            logger.warning("No access to Tickets table - cannot create ticket")
+            return False
+            
+        try:
+            self.tables['Tickets'].put_item(Item=ticket_data)
+            return True
+        except ClientError as e:
+            logger.error(f"Error creating ticket: {str(e)}")
+            return False
 
-def save_event_to_dynamodb(event_data):
-    # Convert datetime object to ISO string
-    event_data['date'] = event_data['date'].isoformat()
+    def delete_ticket(self, ticket_id):
+        """Delete ticket with fallback"""
+        if not self.tables['Tickets']:
+            logger.warning("No access to Tickets table - cannot delete ticket")
+            return False
+            
+        try:
+            self.tables['Tickets'].delete_item(Key={'ticket_id': ticket_id})
+            return True
+        except ClientError as e:
+            logger.error(f"Error deleting ticket: {str(e)}")
+            return False
+            
+    def get_all_attendees(self):
+        """Get all attendees with pagination support"""
+        if not self.tables['Attendees']:
+            logger.warning("No access to Attendees table")
+            return []
+            
+        try:
+            attendees = []
+            response = self.tables['Attendees'].scan()
+            attendees.extend(response.get('Items', []))
+            
+            while 'LastEvaluatedKey' in response:
+                response = self.tables['Attendees'].scan(
+                    ExclusiveStartKey=response['LastEvaluatedKey']
+                )
+                attendees.extend(response.get('Items', []))
+                
+            return attendees
+            
+        except ClientError as e:
+            logger.error(f"Error fetching attendees: {e}")
+            return []
+    
+    def save_attendee(self, attendee_data):
+        """Create attendee with fallback"""
+        if not self.tables['Attendees']:
+            logger.warning("No access to Attendee table - cannot create attendee")
+            return False
+            
+        try:
+            self.tables['Attendees'].put_item(Item=attendee_data)
+            return True
+        except ClientError as e:
+            logger.error(f"Error creating attendee: {str(e)}")
+            return False
+            
+    def get_attendee_by_id(self, attendee_id):
+        try:
+            table = dynamodb_client.Table('Attendees')
+            response = table.scan(
+                    FilterExpression=Key('attendee_id').eq(attendee_id)
+                )
+            return response.get('Items', [0])
+        except ClientError as e:
+            print(f"Error fetching event with ID {attendee_id}: {e}")
+            return None
+            
+    def update_attendee(self, attendee_data):
+        try:
+            table = dynamodb_client.Table('Attendees')
+            response = table.update_item(
+                    Key={'attendee_id': attendee_data['attendee_id']},
+                    UpdateExpression={
+                        'email': attendee_data['email'],
+                        'name': attendee_data['name']
+                    }
+                )
 
-    try:
-        events_table.put_item(Item=event_data)
-        print("✅ Event saved to DynamoDB.")
-    except ClientError as e:
-        print("❌ Error saving event to DynamoDB:", e)
+        except ClientError as e:
+            print(f"Error fetching event with ID {attendee_data}: {e}")
+            return None
 
+# Initialize single instance
+db_manager = DynamoDBManager()
 
+# ========== PUBLIC API ==========
+# Event functions
 def get_all_events_from_dynamodb():
-    response = event_table.scan()
-    items = response.get('Items', [])
-    events = []
+    return db_manager.get_all_events()
 
-    for item in items:
-        # Safe fallback extraction
-        event = {
-    'event_id': item.get('event_id') or item.get('id'),
-    'name': item.get('name', '[No Name]'),
-    'description': item.get('description', ''),
-    'location': item.get('location', ''),
-    'date': item.get('date', ''),
-    'banner_url': item.get('banner_url', ''),
-}
-        events.append(event)
+def get_event_by_id_from_dynamodb(event_id):
+    return db_manager.get_event_by_id(event_id)
 
-    return events
+# Ticket functions
+def get_all_tickets_from_dynamodb():
+    return db_manager.get_all_tickets()
 
-# dynamo_utils.py
-
-# ✅ Step 1: Get Event by ID
-def get_event_by_id(event_id):
-    try:
-        print("🟡 Scanning for event_id:", event_id)
-        response = events_table.get_item(Key={'event_id': event_id})
-        item = response.get('Item')
-        if item:
-            print("✅ Event found:", item)
-            return {
-                'event_id': item['event_id'],
-                'name': item['name'],
-                'date': item['date'],
-                'location': item['location'],
-                'description': item['description'],
-            }
-        print("❌ Event not found")
-        return None
-    except ClientError as e:
-        print("🚨 Error fetching event:", e)
-        return None
-
-# ✅ Step 2: Update Event in DynamoDB
-def update_event_in_dynamodb(event_id, data):
-    try:
-        response = events_table.update_item(
-            Key={'event_id': event_id},
-            UpdateExpression="SET #n = :name, #d = :date, #l = :location, #desc = :description",
-            ExpressionAttributeNames={
-                '#n': 'name',
-                '#d': 'date',
-                '#l': 'location',
-                '#desc': 'description'
-            },
-            ExpressionAttributeValues={
-                ':name': data['name'],
-                ':date': data['date'],
-                ':location': data['location'],
-                ':description': data['description'],
-            }
-        )
-        print("✅ Event updated:", event_id)
-        return True
-    except ClientError as e:
-        print("❌ Error updating event:", e)
-        return False
-
-# ✅ Delete event from DynamoDB
-def delete_event_from_dynamodb(event_id):
-    try:
-        events_table.delete_item(Key={'event_id': event_id})
-        print("🗑️ Event deleted:", event_id)
-        return True
-    except ClientError as e:
-        print("❌ Error deleting event:", e)
-        return False
-
-# ✅ Save a new ticket to DynamoDB
 def save_ticket_to_dynamodb(ticket_data):
-    try:
-        tickets_table.put_item(Item=ticket_data)
-        print("✅ Ticket saved to DynamoDB:", ticket_data)
-        return True
-    except ClientError as e:
-        print("❌ Error saving ticket:", e)
-        return False
+    return db_manager.create_ticket(ticket_data)
+
+def delete_ticket_from_dynamodb(ticket_id):
+    return db_manager.delete_ticket(ticket_id)
+
+# Attendee functions
+def get_all_attendees_from_dynamodb():
+    return db_manager.get_all_attendees()
+    
+def save_attendee_to_dynamodb(attendee_data):
+    return db_manager.save_attendee(attendee_data)
+    
+def get_attendee_id_from_dynamodb(attendee_id) : 
+    return db_manager.get_attendee_by_id(attendee_id)
+
+def update_attendee_in_dynamodb(attendee_data):
+    return db_manager.update_attendee(attendee_data)

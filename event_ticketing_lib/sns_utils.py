@@ -22,15 +22,17 @@ def publish_ticket_notification(event_name, attendee_name, attendee_email):
 
     return response
     '''
-import boto3
-from config import REGION_NAME, SNS_TOPIC_ARN
+    
+# tickets/config.py
+# import boto3
+# from config import REGION_NAME, SNS_TOPIC_ARN
 
-sns_client = boto3.client('sns', region_name=REGION_NAME)
+# sns_client = boto3.client('sns', region_name=REGION_NAME)
 
-def publish_ticket_notification(message):
-    response = sns_client.publish(
-        TopicArn=SNS_TOPIC_ARN,
-        Message=message,
-        Subject='New Ticket Booking'
-    )
-    return response
+# def publish_ticket_notification(message):
+#     response = sns_client.publish(
+#         TopicArn=SNS_TOPIC_ARN,
+#         Message=message,
+#         Subject='New Ticket Booking'
+#     )
+#     return response
